@@ -42,6 +42,8 @@ set(SRC
     src/fbs-to-jsonl.cpp
 )
 
+include_directories(include)
+
 set(FBS_TO_JSONL fbstojsonl)
 add_library(${FBS_TO_JSONL} STATIC ${SRC})
 

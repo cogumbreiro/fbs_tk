@@ -1,5 +1,5 @@
-#include "fbs-to-jsonl.hpp"
-#include "io-util.hpp"
+#include "fbs-to-jsonl/fbs-to-jsonl.hpp"
+#include "fbs-to-jsonl/io-util.hpp"
 
 #include <cstring>
 

@@ -1,9 +1,7 @@
 #include <flatbuffers/flatbuffers.h>
 #include <flatbuffers/idl.h>
 #include <flatbuffers/util.h>
-
-#include "io-util.hpp"
-#include "fbs-to-jsonl.hpp"
+#include <fbs-to-jsonl/fbs-to-jsonl.hpp>
 
 int main(int argc, const char **argv) {
 	if (argc != 2) {

@@ -1,9 +1,9 @@
-#include "io-util.hpp"
+#include "fbs-to-jsonl/io-util.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "flatbuffers/flatbuffers.h"
+#include <flatbuffers/flatbuffers.h>
 
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>

@@ -1,4 +1,4 @@
-#include "fbs-to-jsonl.hpp"
+#include "fbs-to-jsonl/fbs-to-jsonl.hpp"
 #include <flatbuffers/idl.h>
 #include <flatbuffers/util.h>
 

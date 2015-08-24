@@ -32,6 +32,33 @@ bool fbs_stream_to_jsonl(const std::string &schema, std::istream &in, std::ostre
 // converts a stream of JSON objects into a stream of binary FBS
 bool jsonl_to_fbs_stream(const std::string &schema, std::istream &in, std::ostream &out);
 
+// GetRoot from a string
+template<class T>
+inline const T* GetRootFrom(const std::string &buff) {
+	return flatbuffers::GetRoot<T>(buff.c_str());
+}
+
+// Create a root object and bundle it with its data
+template <class T>
+struct Root {
+	const T* root;
+
+	Root() : root(nullptr), data() {}
+	Root(const std::string &buff) {
+		data = buff;
+		root = GetRootFrom<T>(data);
+	}
+	Root(const T& other, std::function<flatbuffers::Offset<T>(flatbuffers::FlatBufferBuilder &, const T&)> copier) : data() {
+		flatbuffers::FlatBufferBuilder builder;
+		auto subs = copier(builder, other);
+		builder.Finish(subs);
+		fbs_tk::buffer_copy(builder.GetBufferPointer(), builder.GetSize(), data);
+		root = GetRootFrom<T>(data);
+	}
+private:
+	std::string data;
+};
+
 } // namespace
 
 #endif // _FBS_TK_HPP_

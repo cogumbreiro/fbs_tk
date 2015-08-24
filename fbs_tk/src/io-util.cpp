@@ -1,4 +1,4 @@
-#include "fbs-to-jsonl/io-util.hpp"
+#include "fbs_tk.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -8,7 +8,7 @@
 using namespace flatbuffers;
 using namespace std;
 
-namespace fbs2jsonl {
+namespace fbs_tk {
 
 bool store_string(ostream &out, const string &data) {
 	uint32_t size = data.size();

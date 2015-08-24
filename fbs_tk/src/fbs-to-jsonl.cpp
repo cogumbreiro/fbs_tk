@@ -1,12 +1,11 @@
-#include "fbs-to-jsonl/fbs-to-jsonl.hpp"
-#include "fbs-to-jsonl/io-util.hpp"
+#include "fbs_tk.hpp"
 
 #include <cstring>
 
 using namespace std;
 using namespace flatbuffers;
 
-namespace fbs2jsonl {
+namespace fbs_tk {
 
 bool json_to_bin(Parser &parser, const char *js, string &bin) {
 	if (!parser.Parse(js)) {

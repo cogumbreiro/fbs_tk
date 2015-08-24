@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-project(fbs2jsonl)
+project(fbs_tk)
+set(CPM_MODULE_NAME "fbs_tk")
+set(CPM_LIB_TARGET_NAME ${CPM_MODULE_NAME})
 
 ###
 # CPM dependencies
@@ -7,13 +9,10 @@ project(fbs2jsonl)
 
 include(init-cpm.cmake) # download and initialize CPM
 
-CPM_AddModule("catch"
-  GIT_REPOSITORY "https://github.com/bcachet/cpm-catch")
-
 CPM_AddModule("flatbuffers"
   GIT_REPOSITORY "https://github.com/cogumbreiro/cpm-flatbuffers")
 
-CPM_Finish()
+CPM_InitModule(${CPM_MODULE_NAME})
 
 function(my_add_test target)
 	my_add_executable(${target} ${ARGN})
@@ -35,22 +34,18 @@ add_definitions (
     -std=c++11
 )
 
-enable_testing()
-
 set(SRC
-    src/io-util.cpp
-    src/fbs-to-jsonl.cpp
+    fbs_tk/src/io-util.cpp
+    fbs_tk/src/fbs-to-jsonl.cpp
 )
 
-include_directories(include)
+include_directories(fbs_tk)
+CPM_ExportAdditionalIncludeDir(fbs_tk)
 
-set(FBS_TO_JSONL fbstojsonl)
-add_library(${FBS_TO_JSONL} STATIC ${SRC})
-
-# Generate tests:
-my_add_test(test-io-util src/test-io-util.cpp)
-my_add_test(test-fbs-to-jsonl src/test-fbs-to-jsonl.cpp)
+add_library(${CPM_LIB_TARGET_NAME} ${SRC})
+target_link_libraries(${CPM_LIB_TARGET_NAME} ${CPM_LIBRARIES})
+CPM_ExportAdditionalLibraryTarget(${CPM_MODULE_NAME})
 
 # Generate programs:
-my_add_executable(fbs2jsonl src/fbs2jsonl.cpp)
-my_add_executable(jsonl2fbs src/jsonl2fbs.cpp)
+#my_add_executable(fbs2jsonl src/fbs2jsonl.cpp)
+#my_add_executable(jsonl2fbs src/jsonl2fbs.cpp)

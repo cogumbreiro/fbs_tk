@@ -1,4 +1,4 @@
-#include "fbs-to-jsonl/io-util.hpp"
+#include "fbs_tk.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -10,7 +10,7 @@
 
 using namespace std;
 using namespace flatbuffers;
-using namespace fbs2jsonl;
+using namespace fbs_tk;
 
 TEST_CASE("load_buffer") {
 	auto txt = "{\"access\": \"w\", \"function\":\"foo\", \"subscripts\": [{\"atoms\":[{\"constant\": 1, \"level\": 2, \"variable\": true}]}]}";

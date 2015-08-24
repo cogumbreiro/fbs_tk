@@ -1,7 +1,7 @@
 #include <flatbuffers/flatbuffers.h>
 #include <flatbuffers/idl.h>
 #include <flatbuffers/util.h>
-#include <fbs-to-jsonl/fbs-to-jsonl.hpp>
+#include <fbs_tk.hpp>
 
 int main(int argc, const char **argv) {
 	if (argc != 2) {
@@ -16,7 +16,7 @@ int main(int argc, const char **argv) {
   		std::cerr << "Could not open schema: " << argv[1] << std::endl;
   		return -2;
   	}
-  	if (!fbs2jsonl::jsonl_to_fbs_stream(schemafile.c_str(), std::cin, std::cout)) {
+  	if (!fbs_tk::jsonl_to_fbs_stream(schemafile.c_str(), std::cin, std::cout)) {
 		std::cerr << "Error parsing data!" << std::endl;
 		return -3;
   	}

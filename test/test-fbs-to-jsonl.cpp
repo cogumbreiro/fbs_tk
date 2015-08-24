@@ -1,4 +1,4 @@
-#include "fbs-to-jsonl/fbs-to-jsonl.hpp"
+#include "fbs_tk.hpp"
 #include <flatbuffers/idl.h>
 #include <flatbuffers/util.h>
 
@@ -7,7 +7,7 @@
 
 using namespace std;
 using namespace flatbuffers;
-using namespace fbs2jsonl;
+using namespace fbs_tk;
 
 TEST_CASE("bin-to-json") {
 	string schema =

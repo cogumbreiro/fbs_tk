@@ -1,3 +1,6 @@
+#ifndef _FBS_TK_HPP_
+#define _FBS_TK_HPP_
+
 #include <flatbuffers/idl.h>
 #include <flatbuffers/util.h>
 #include <iostream>
@@ -30,3 +33,5 @@ bool fbs_stream_to_jsonl(const std::string &schema, std::istream &in, std::ostre
 bool jsonl_to_fbs_stream(const std::string &schema, std::istream &in, std::ostream &out);
 
 } // namespace
+
+#endif // _FBS_TK_HPP_

@@ -1,2 +1,3 @@
-# fbs-to-jsonl
-Bidirectional convertion from a stream of  Flabuffer binary objects and JSONL.
+# Flatbuffers' toolkit
+
+Some utility functions to manipulate flatbuffers.

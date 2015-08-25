@@ -48,10 +48,9 @@ struct Root {
 		data = buff;
 		root = GetRootFrom<T>(data);
 	}
-	Root(const T& other, std::function<flatbuffers::Offset<T>(flatbuffers::FlatBufferBuilder &, const T&)> copier) : data() {
+	Root(std::function< flatbuffers::Offset<T> (flatbuffers::FlatBufferBuilder &)> factory) : data() {
 		flatbuffers::FlatBufferBuilder builder;
-		auto subs = copier(builder, other);
-		builder.Finish(subs);
+		builder.Finish(factory(builder));
 		fbs_tk::buffer_copy(builder.GetBufferPointer(), builder.GetSize(), data);
 		root = GetRootFrom<T>(data);
 	}

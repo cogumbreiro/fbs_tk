@@ -10,7 +10,6 @@ int main(int argc, const char **argv) {
 		std::cerr << "\tSCHEMA\tThe flatbuffers schema used to parse the data." << std::endl;
 		return -1;
 	}
-	flatbuffers::Parser parser;
 	std::string schemafile;
   	if (!flatbuffers::LoadFile(argv[1], false, &schemafile)) {
   		std::cerr << "Could not open: " << argv[1] <<  std::endl;

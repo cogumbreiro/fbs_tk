@@ -11,3 +11,5 @@ fbs2jsonl
 jsonl2fbs
 test-fbs-to-jsonl
 test-io-util
+/bin/fbs2json
+/bin/json2fbs

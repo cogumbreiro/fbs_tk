@@ -15,6 +15,20 @@ bool json_to_bin(Parser &parser, const char *js, string &bin) {
 	return true;
 }
 
+bool json_to_fbs(flatbuffers::Parser &parser, std::istream &in, std::ostream &out) {
+	string js;
+	if (!load_buffer(in, &js)) {
+		return false;
+	}
+	string bin;
+	if (!json_to_bin(parser, js.c_str(), bin)) {
+		return false;
+	}
+	out.write(bin.c_str(), bin.size());
+	return true;
+}
+
+
 struct BinToJson {
 	GeneratorOptions opts;
 	BinToJson() {
@@ -28,6 +42,16 @@ string bin_to_json(Parser &parser, const void *bin) {
 	string buffer;
 	GenerateText(parser, bin, init.opts, &buffer);
 	return buffer;
+}
+
+// converts a binary FBS into a json object
+bool fbs_to_json(flatbuffers::Parser &parser, std::istream &in, std::ostream &out) {
+	string bin;
+	if (!load_buffer(in, &bin)) {
+		return false;
+	}
+	out << bin_to_json(parser, bin.data());
+	return true;
 }
 
 bool fbs_stream_to_jsonl(const string &schema, istream &in, ostream &out) {

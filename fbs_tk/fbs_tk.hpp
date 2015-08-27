@@ -27,6 +27,12 @@ bool load_string(std::istream &in, std::string &str);
 bool json_to_bin(flatbuffers::Parser &parser, const char *js, std::string &bin);
 // converts a binary FBS into a json object
 std::string bin_to_json(flatbuffers::Parser &parser, const void *bin);
+
+// converts a json object into a binary FBS
+bool json_to_fbs(flatbuffers::Parser &parser, std::istream &in, std::ostream &out);
+// converts a binary FBS into a json object
+bool fbs_to_json(flatbuffers::Parser &parser, std::istream &in, std::ostream &out);
+
 // converts a stream of binary FBS into a stream of JSON objects
 bool fbs_stream_to_jsonl(const std::string &schema, std::istream &in, std::ostream &out);
 // converts a stream of JSON objects into a stream of binary FBS
@@ -53,6 +59,18 @@ struct Root {
 		builder.Finish(factory(builder));
 		fbs_tk::buffer_copy(builder.GetBufferPointer(), builder.GetSize(), data);
 		root = GetRootFrom<T>(data);
+	}
+	Root(flatbuffers::FlatBufferBuilder &builder, flatbuffers::Offset<T> obj) : data() {
+		builder.Finish(obj);
+		fbs_tk::buffer_copy(builder.GetBufferPointer(), builder.GetSize(), data);
+		root = GetRootFrom<T>(data);
+	}
+	const T* operator->() const {
+		return root;
+	}
+
+	const T& operator*() const {
+		return *root;
 	}
 private:
 	std::string data;

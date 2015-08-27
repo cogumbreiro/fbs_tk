@@ -34,4 +34,6 @@ add_definitions (
 
 my_add_executable(fbs2jsonl fbs2jsonl.cpp)
 my_add_executable(jsonl2fbs jsonl2fbs.cpp)
+my_add_executable(fbs2json fbs2json.cpp)
+my_add_executable(json2fbs json2fbs.cpp)
 

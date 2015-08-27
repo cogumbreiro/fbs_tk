@@ -27,6 +27,44 @@ TEST_CASE("bin-to-json") {
 	REQUIRE(bin1 == bin2);
 }
 
+TEST_CASE("fbs-to-json-io") {
+	string schema =
+		"table Atom {\n"
+		"  a: int;\n"
+		"  b: bool;\n"
+		"}\n"
+		"root_type Atom;\n";
+	string js1 = "{\"a\": 10,\"b\": 99}";
+	flatbuffers::Parser parser1;
+	parser1.Parse(schema.c_str());
+	string bin1;
+	json_to_bin(parser1, js1.c_str(), bin1);
+	
+	istringstream in(bin1);
+	ostringstream out;
+	REQUIRE(fbs_to_json(parser1, in, out));
+	REQUIRE(out.str() == js1);
+}
+
+TEST_CASE("json-to-fbs-io") {
+	string schema =
+		"table Atom {\n"
+		"  a: int;\n"
+		"  b: bool;\n"
+		"}\n"
+		"root_type Atom;\n";
+	string js1 = "{\"a\": 10,\"b\": 99}";
+	flatbuffers::Parser parser1;
+	parser1.Parse(schema.c_str());
+	string bin1;
+	json_to_bin(parser1, js1.c_str(), bin1);
+	
+	istringstream in(js1);
+	ostringstream out;
+	REQUIRE(json_to_fbs(parser1, in, out));
+	REQUIRE(out.str() == bin1);
+}
+
 TEST_CASE("parse-no-bug") {
 	string schema =
 		"table Bar {\n"

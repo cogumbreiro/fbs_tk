@@ -79,10 +79,10 @@ struct Buffer {
 	 * replacing the contents of this buffer.
 	 */
 	inline bool load_data(std::istream &in) {
-		in.clear();
-		std::copy(std::istream_iterator<char>(in), 
-				std::istream_iterator<char>(),
-				std::back_inserter(data));
+		data.clear();
+		// http://stackoverflow.com/questions/8075795/
+		in >> std::noskipws;
+		data.assign(std::istream_iterator<char>(in), std::istream_iterator<char>());
 		return !in.bad();
 	}
 

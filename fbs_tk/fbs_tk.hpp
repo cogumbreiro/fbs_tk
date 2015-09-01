@@ -6,6 +6,7 @@
 #include <iostream>
 #include <cstring>
 #include <iterator>
+#include <cassert>
 
 namespace fbs_tk {
 // http://stackoverflow.com/questions/13037490/
@@ -41,14 +42,14 @@ inline void buffer_copy(const void *data, size_t size, std::string &dst) {
 }
 
 // Encodes a vector of bytes in an output stream
-bool write_buffer(std::ostream &out, const std::vector<int8_t> &data);
+bool write_buffer(std::ostream &out, const std::vector<uint8_t> &data);
 // Reads a vector of bytes from an input stream
-bool read_buffer(std::istream &in, std::vector<int8_t> &out);
+bool read_buffer(std::istream &in, std::vector<uint8_t> &out);
 
 struct Buffer {
 	Buffer() {}
 	
-	Buffer(const std::vector<int8_t> &data) : data(data) {}
+	Buffer(const std::vector<uint8_t> &data) : data(data) {}
 	
 	Buffer(const Buffer &buff) : Buffer(buff.data) {}
 
@@ -57,11 +58,11 @@ struct Buffer {
 		memcpy(data.data(), buff, buff_size);
 	}
 	
-	inline std::vector<int8_t> &get_data() {
+	inline std::vector<uint8_t> &get_data() {
 		return data;
 	}
 	
-	inline const std::vector<int8_t> &get_data() const {
+	inline const std::vector<uint8_t> &get_data() const {
 		return data;
 	}
 	
@@ -73,12 +74,27 @@ struct Buffer {
 		return data.size();
 	}
 	
+	/**
+	 * Loads all data available in the input stream into this buffer,
+	 * replacing the contents of this buffer.
+	 */
+	inline bool load_data(std::istream &in) {
+		in.clear();
+		std::copy(std::istream_iterator<char>(in), 
+				std::istream_iterator<char>(),
+				std::back_inserter(data));
+		return !in.bad();
+	}
+
+	/**
+	 * Writes all data in this buffer into the output stream.
+	 */
 	void write_data(std::ostream &out) {
 		out.write(reinterpret_cast<const char*>(data.data()), data.size());
 	}
 	
 private:
-	std::vector<int8_t> data;
+	std::vector<uint8_t> data;
 
 	friend std::istream &operator>>(std::istream &in, Buffer &buff) {
 		read_buffer(in, buff.data);
@@ -89,14 +105,6 @@ private:
         return out;
     }
 };
-
-inline bool load_buffer(std::istream &in, Buffer &buf) {
-	std::copy(std::istream_iterator<char>(in), 
-			std::istream_iterator<char>(),
-			std::back_inserter(buf.get_data()));
-	return !in.bad();
-}
-
 
 inline void copy_from(Buffer &buffer, const flatbuffers::FlatBufferBuilder &builder) {
 	buffer.copy_from(builder.GetBufferPointer(), builder.GetSize());
@@ -121,6 +129,13 @@ bool jsonl_to_fbs_stream(const std::string &schema, std::istream &in, std::ostre
 // GetRoot from a string
 template<class T>
 inline const T* get_root(const Buffer &buff) {
+	auto check = flatbuffers::Verifier(buff.get_data().data(), buff.size());
+	return check.VerifyBuffer<T>() ?
+		flatbuffers::GetRoot<T>(buff.get_data().data()) : nullptr;
+}
+
+template<class T>
+inline const T* get_root_unsafe(const Buffer &buff) {
 	return flatbuffers::GetRoot<T>(buff.get_data().data());
 }
 
@@ -140,46 +155,62 @@ struct Root {
 		root = get_root<T>(data);
 	}
 
-	Root(const Root &other) : Root(other.data) {}
+	Root(const Root &other) {
+		data = other.data;
+		root = other.root == nullptr ? nullptr : get_root_unsafe<T>(data);
+	}
 
 	Root(std::function< flatbuffers::Offset<T> (flatbuffers::FlatBufferBuilder &)> factory) : data() {
 		flatbuffers::FlatBufferBuilder builder;
 		builder.Finish(factory(builder));
 		copy_from(data, builder);
-		root = get_root<T>(data);
+		root = get_root_unsafe<T>(data);
 	}
 	
 	Root(flatbuffers::FlatBufferBuilder &builder, flatbuffers::Offset<T> obj) : data() {
 		builder.Finish(obj);
 		copy_from(data, builder);
-		root = get_root<T>(data);
+		root = get_root_unsafe<T>(data);
 	}
 
 	const T* operator->() const {
+		assert(valid());
 		return root;
 	}
 
 	const T& operator*() const {
+		assert(valid());
 		return *root;
 	}
 	
 	bool operator==(const Root<T> &other) const {
+		assert(valid());
 		return *root == *other.root;
 	}
 
 	bool operator!=(const Root<T> &other) const {
+		assert(valid());
 		return *root != *other.root;
 	}
 	
+	bool valid() const {
+		return root != nullptr;
+	}
+	
 private:
-	friend std::istream &operator>>(std::istream &in, Root<T> &buff) {
-		in >> buff.data;
-		buff.root = get_root<T>(buff.data);
+	friend std::istream &operator>>(std::istream &in, Root<T> &root) {
+		in >> root.data;
+		root.root = get_root<T>(root.data);
+		if (!root.valid()) {
+			// mark the input stream as invalid
+			in.setstate(in.badbit);
+		}
 		return in;
 	}
 
-	friend std::ostream &operator<<(std::ostream &out, const Root<T> &buff) {
-		out << buff.data;
+	friend std::ostream &operator<<(std::ostream &out, const Root<T> &root) {
+		assert(root.valid());
+		out << root.data;
 		return out;
 	}
 

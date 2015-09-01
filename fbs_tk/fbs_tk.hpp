@@ -219,6 +219,21 @@ private:
 };
 
 template<class T>
+Root<T> open_root(std::string filename) {
+	std::ifstream ifs(filename, std::ifstream::binary);
+	if (ifs.bad()) {
+		return Root<T>();
+	}
+	Buffer buff;
+	buff.load_data(ifs);
+	fbs_tk::Root<T> result(buff);
+	if (ifs.bad()) {
+		return Root<T>();
+	}
+	return result;
+}
+
+template<class T>
 inline Root<T> copy_root(const T& other) {
 	flatbuffers::FlatBufferBuilder b;
 	return Root<T>(b, copy<T>()(b, other));

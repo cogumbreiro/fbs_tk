@@ -7,11 +7,11 @@ using namespace flatbuffers;
 
 namespace fbs_tk {
 
-bool json_to_bin(Parser &parser, const char *js, string &bin) {
+bool json_to_bin(Parser &parser, const char *js, Buffer &bin) {
 	if (!parser.Parse(js)) {
 		return false;
 	}
-	buffer_copy(parser.builder_.GetBufferPointer(),  parser.builder_.GetSize(), bin);
+	copy_from(bin, parser.builder_);
 	return true;
 }
 
@@ -20,11 +20,11 @@ bool json_to_fbs(flatbuffers::Parser &parser, std::istream &in, std::ostream &ou
 	if (!load_buffer(in, &js)) {
 		return false;
 	}
-	string bin;
+	Buffer bin;
 	if (!json_to_bin(parser, js.c_str(), bin)) {
 		return false;
 	}
-	out.write(bin.c_str(), bin.size());
+	bin.write_data(out);
 	return true;
 }
 
@@ -37,29 +37,28 @@ struct BinToJson {
 	}
 };
 
-string bin_to_json(Parser &parser, const void *bin) {
+string bin_to_json(Parser &parser, const Buffer &bin) {
 	static BinToJson init;
 	string buffer;
-	GenerateText(parser, bin, init.opts, &buffer);
+	GenerateText(parser, bin.get_data().data(), init.opts, &buffer);
 	return buffer;
 }
 
 // converts a binary FBS into a json object
 bool fbs_to_json(flatbuffers::Parser &parser, std::istream &in, std::ostream &out) {
-	string bin;
-	if (!load_buffer(in, &bin)) {
+	Buffer bin;
+	if (!load_buffer(in, bin)) {
 		return false;
 	}
-	out << bin_to_json(parser, bin.data());
+	out << bin_to_json(parser, bin);
 	return true;
 }
 
 bool fbs_stream_to_jsonl(const string &schema, istream &in, ostream &out) {
 	Parser parser;
 	parser.Parse(schema.c_str());
-	string data;
-	while(load_string(in, data)) {
-		out << bin_to_json(parser, data.c_str()) << endl;
+	for (const auto & buff : range<Buffer>(in)) {
+		out << bin_to_json(parser, buff) << endl;
 	}
 	return in.eof();
 }
@@ -68,12 +67,13 @@ bool jsonl_to_fbs_stream(const string &schema, istream &in, ostream &out) {
 	Parser parser;
 	parser.Parse(schema.c_str());
 	string js;
-	string bin;
+	Buffer bin;
 	while(getline(in, js)) {
 		if (!json_to_bin(parser, js.c_str(), bin)) {
 			return false;
 		}
-		if (!store_string(out, bin)) {
+		out << bin;
+		if (out.bad()) {
 			return false;
 		}
 	}

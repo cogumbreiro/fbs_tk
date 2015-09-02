@@ -221,15 +221,17 @@ private:
 template<class T>
 Root<T> open_root(std::string filename) {
 	std::ifstream ifs(filename, std::ifstream::binary);
-	if (ifs.bad()) {
+	if (!ifs.is_open()) {
 		return Root<T>();
 	}
 	Buffer buff;
 	buff.load_data(ifs);
 	fbs_tk::Root<T> result(buff);
 	if (ifs.bad()) {
+		ifs.close();
 		return Root<T>();
 	}
+	ifs.close();
 	return result;
 }
 

@@ -14,21 +14,6 @@ CPM_AddModule("flatbuffers"
 
 CPM_InitModule(${CPM_MODULE_NAME})
 
-function(my_add_test target)
-	my_add_executable(${target} ${ARGN})
-    add_test(${target} ${target})
-endfunction()
-
-function(my_add_executable target)
-    add_executable(${target} ${ARGN})
-    target_link_libraries(${target} ${FBS_TO_JSONL})
-    target_link_libraries(${target} ${CPM_LIBRARIES})
-endfunction()
-
-##
-# Project details:
-##
-
 add_definitions (
     -Wall -pedantic -g
     -std=c++11
@@ -46,6 +31,3 @@ add_library(${CPM_LIB_TARGET_NAME} ${SRC})
 target_link_libraries(${CPM_LIB_TARGET_NAME} ${CPM_LIBRARIES})
 CPM_ExportAdditionalLibraryTarget(${CPM_MODULE_NAME})
 
-# Generate programs:
-#my_add_executable(fbs2jsonl src/fbs2jsonl.cpp)
-#my_add_executable(jsonl2fbs src/jsonl2fbs.cpp)

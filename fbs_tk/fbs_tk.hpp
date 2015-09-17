@@ -41,15 +41,14 @@ inline void buffer_copy(const void *data, size_t size, std::string &dst) {
 	memcpy(&dst[0], data, size);
 }
 
-// Encodes a vector of bytes in an output stream
-bool write_buffer(std::ostream &out, const std::vector<uint8_t> &data);
-// Reads a vector of bytes from an input stream
-bool read_buffer(std::istream &in, std::vector<uint8_t> &out);
-
 struct Buffer {
 	Buffer() {}
 	
+	Buffer(std::initializer_list<uint8_t> args) : data(args) {}
+	
 	Buffer(const std::vector<uint8_t> &data) : data(data) {}
+	
+	Buffer(const std::string &data) : data(data.begin(), data.end()) {}
 	
 	Buffer(const Buffer &buff) : Buffer(buff.data) {}
 
@@ -57,13 +56,22 @@ struct Buffer {
 		data.resize(buff_size);
 		memcpy(data.data(), buff, buff_size);
 	}
+
+	inline void copy_from(const std::string &buff) {
+		copy_from(buff.data(), buff.size());
+	}
 	
 	inline std::vector<uint8_t> &get_data() {
 		return data;
 	}
 	
+	
 	inline const std::vector<uint8_t> &get_data() const {
 		return data;
+	}
+	
+	inline std::string str() const {
+		return std::string(data.begin(), data.end());
 	}
 	
 	inline bool operator==(const Buffer &other) const {
@@ -97,12 +105,25 @@ private:
 	std::vector<uint8_t> data;
 
 	friend std::istream &operator>>(std::istream &in, Buffer &buff) {
-		read_buffer(in, buff.data);
-        return in;
+		char size_buff[sizeof(uint32_t)];
+		in.read(size_buff, sizeof(uint32_t));
+		if (in.bad()) {
+			return in;
+		}
+		auto size = flatbuffers::ReadScalar<uint32_t>(size_buff);
+		buff.data.resize(size);
+		auto data = buff.get_data().data();
+		in.read(reinterpret_cast<char *>(data), size);
+	  	return in;
     }
+    
     friend std::ostream &operator<<(std::ostream &out, const Buffer &buff) {
-		write_buffer(out, buff.data);
-        return out;
+		uint32_t size = buff.size();
+		char size_buff[sizeof(uint32_t)];
+		flatbuffers::WriteScalar(size_buff, size);
+		out.write(size_buff, sizeof(uint32_t));
+		out.write(reinterpret_cast<const char*>(buff.get_data().data()), size);
+		return out;
     }
 };
 
@@ -197,6 +218,12 @@ struct Root {
 		return root != nullptr;
 	}
 	
+	template<class S>
+	static inline Root<S> copy(const S& other) {
+		flatbuffers::FlatBufferBuilder b;
+		return Root<S>(b, copy<S>()(b, other));
+	}
+
 private:
 	friend std::istream &operator>>(std::istream &in, Root<T> &root) {
 		in >> root.data;
@@ -233,12 +260,6 @@ Root<T> open_root(std::string filename) {
 	}
 	ifs.close();
 	return result;
-}
-
-template<class T>
-inline Root<T> copy_root(const T& other) {
-	flatbuffers::FlatBufferBuilder b;
-	return Root<T>(b, copy<T>()(b, other));
 }
 
 } // namespace

@@ -30,7 +30,8 @@ TEST_CASE("buffer_copy") {
 TEST_CASE("write-str") {
 	ostringstream out;
 	string foo = "foo";
-	REQUIRE(store_string(out, foo));
+	out << Buffer(foo);
+	REQUIRE(out.good());
 	auto data = out.str();
 	REQUIRE(ReadScalar<uint32_t>(data.c_str()) == 3);
 	REQUIRE(data[sizeof(uint32_t) + 0] == 'f');
@@ -42,8 +43,9 @@ TEST_CASE("write-str") {
 
 TEST_CASE("write-buffer") {
 	ostringstream out;
-	vector<int8_t> foo = {1, 2, 3};
-	REQUIRE(write_buffer(out, foo));
+	Buffer foo({1, 2, 3});
+	out << foo;
+	REQUIRE(out.good());
 	auto str = out.str();
 	auto data = str.c_str();
 	REQUIRE(ReadScalar<uint32_t>(data) == 3);
@@ -58,21 +60,22 @@ TEST_CASE("read-buffer") {
 	char size_buff[sizeof(uint32_t)];
 	WriteScalar(size_buff, 3);
 	out.write(size_buff, sizeof(uint32_t));
-	int8_t tmp[3] = {1, 2, 3};
+	uint8_t tmp[3] = {1, 2, 3};
 	out.write(reinterpret_cast<const char*>(tmp), 3);
 
-	vector<int8_t> obtained;
+	Buffer obtained;
 	istringstream in(out.str());
-	read_buffer(in, obtained);
-	vector<int8_t> expected = {1, 2, 3};
-	REQUIRE(expected == obtained);
+	in >> obtained;
+	vector<uint8_t> expected = {1, 2, 3};
+	REQUIRE(expected == obtained.get_data());
 }
 
 TEST_CASE("write-str-2") {
 	ostringstream out;
 	string foo = string("f\0o", 3);
 	REQUIRE(foo.size() == 3);
-	REQUIRE(store_string(out, foo));
+	out << Buffer(foo);
+	REQUIRE(out.good());
 	auto data = out.str();
 	REQUIRE(ReadScalar<uint32_t>(data.c_str()) == 3);
 	REQUIRE(data[sizeof(uint32_t) + 0] == 'f');
@@ -83,14 +86,17 @@ TEST_CASE("write-str-2") {
 
 TEST_CASE("while-load-str") {
 	ostringstream out;
-	store_string(out, "foo");
-	store_string(out, "bar");
+	out << Buffer("foo");
+	out << Buffer("bar");
 	istringstream in(out.str());
 	vector<string> obtained;
-	string elem;
-	while(load_string(in, elem)) {
-		obtained.push_back(elem);
-	}
+	Buffer elem;
+	in >> elem;
+	REQUIRE(in.good());
+	obtained.push_back(elem.str());
+	in >> elem;
+	REQUIRE(in.good());
+	obtained.push_back(elem.str());
 	vector<string> expected = {"foo", "bar"};
 	REQUIRE(obtained == expected);
 }
@@ -113,37 +119,40 @@ TEST_CASE("irange") {
 
 TEST_CASE("buff-ser") {
 	ostringstream out;
-	vector<int8_t> v1 = {1, 2};
+	vector<uint8_t> v1 = {1, 2};
 	Buffer expected(v1);
 	out << expected;
 	istringstream in(out.str());
 	Buffer obtained;
-	REQUIRE(read_buffer(in, obtained.get_data()));
-	//in >> obtained;
-	REQUIRE(expected.get_data() == obtained.get_data());
+	in >> obtained;
+	REQUIRE(in.good());
+	REQUIRE(in.peek() == EOF);
 }
 
-/*
-TEST_CASE("string-stream-loop") {
-	ostringstream out;
-	store_string(out, "foo");
-	store_string(out, "bar");
-	istringstream in(out.str());
-	vector<string> obtained;
-	for (string elem : string_stream(in)) {
-		obtained.push_back(elem);
+TEST_CASE("range-buffer-empty") {
+	istringstream in("");
+	for (const auto & buffer : range<Buffer>(in)) {
+		REQUIRE(false);
 	}
-	vector<string> expected = {"foo", "bar"};
-	REQUIRE(obtained == expected);
-}*/
+	REQUIRE(in.eof());
+}
+
+TEST_CASE("range-buffer-garbage") {
+	istringstream in("lololol");
+	for (const auto & buffer : range<Buffer>(in)) {
+		REQUIRE(false);
+	}
+	REQUIRE(in.fail());
+}
 
 TEST_CASE("read-str") {
 	ostringstream out;
-	string expected = "foo";
-	store_string(out, expected);
+	Buffer expected("foo");
+	out << expected;
 	istringstream in(out.str());
-	string obtained;
-	REQUIRE(load_string(in, obtained));
+	Buffer obtained;
+	in >> obtained;
+	REQUIRE(in.good());
 	REQUIRE(expected == obtained);
 }
 

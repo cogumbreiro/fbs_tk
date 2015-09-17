@@ -38,10 +38,6 @@ add_definitions (
 )
 
 enable_testing()
-# Generate tests:
-#add_executable(test_io_util test-io-util.cpp)
-#target_link_libraries(test_io_util ${CPM_LIBRARIES})
-#add_dependencies(test_io_util ${CPM_LIBRARIES})
 
 my_add_test(test-io-util test-io-util.cpp)
 my_add_test(test-fbs-to-jsonl test-fbs-to-jsonl.cpp)

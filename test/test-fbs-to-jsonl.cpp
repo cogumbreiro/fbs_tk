@@ -19,10 +19,10 @@ TEST_CASE("bin-to-json") {
 	string js1 = "{\"a\":10,\"b\":0}";
 	flatbuffers::Parser parser;
 	REQUIRE(parser.Parse(schema.c_str()));
-	string bin1;
+	Buffer bin1;
 	REQUIRE(json_to_bin(parser, js1.c_str(), bin1));
-	auto obtained_js1 = bin_to_json(parser, bin1.c_str());
-	string bin2;
+	auto obtained_js1 = bin_to_json(parser, bin1);
+	Buffer bin2;
 	REQUIRE(json_to_bin(parser, obtained_js1.c_str(), bin2));
 	REQUIRE(bin1 == bin2);
 }
@@ -34,13 +34,14 @@ TEST_CASE("fbs-to-json-io") {
 		"  b: bool;\n"
 		"}\n"
 		"root_type Atom;\n";
-	string js1 = "{\"a\": 10,\"b\": 99}";
 	flatbuffers::Parser parser1;
-	parser1.Parse(schema.c_str());
-	string bin1;
+	REQUIRE(parser1.Parse(schema.c_str()));
+
+	Buffer bin1;
+	string js1 = "{\"a\": 10,\"b\": true}";
 	json_to_bin(parser1, js1.c_str(), bin1);
 	
-	istringstream in(bin1);
+	istringstream in(bin1.str());
 	ostringstream out;
 	REQUIRE(fbs_to_json(parser1, in, out));
 	REQUIRE(out.str() == js1);
@@ -56,13 +57,13 @@ TEST_CASE("json-to-fbs-io") {
 	string js1 = "{\"a\": 10,\"b\": 99}";
 	flatbuffers::Parser parser1;
 	parser1.Parse(schema.c_str());
-	string bin1;
+	Buffer bin1;
 	json_to_bin(parser1, js1.c_str(), bin1);
 	
 	istringstream in(js1);
 	ostringstream out;
 	REQUIRE(json_to_fbs(parser1, in, out));
-	REQUIRE(out.str() == bin1);
+	REQUIRE(out.str() == bin1.str());
 }
 
 TEST_CASE("parse-no-bug") {
@@ -103,13 +104,13 @@ TEST_CASE("bin-to-jsonl-to-bin") {
 		"root_type Atom;\n";
 	flatbuffers::Parser parser;
 	parser.Parse(schema.c_str());
-	string bin1;
-	json_to_bin(parser, "{\"a\":10,\"b\":0}", bin1);
-	string bin2;
-	json_to_bin(parser, "{\"a\":20,\"b\":1}", bin2);
+	Buffer bin1;
+	json_to_bin(parser, "{\"a\":99,\"b\":true}", bin1);
+	Buffer bin2;
+	json_to_bin(parser, "{\"a\":33,\"b\":false}", bin2);
 	ostringstream out1;
-	store_string(out1, bin1);
-	store_string(out1, bin2);
+	out1 << bin1;
+	out1 << bin2;
 	istringstream in1(out1.str());
 	// end of bootstrap
 	
@@ -121,7 +122,8 @@ TEST_CASE("bin-to-jsonl-to-bin") {
 	ostringstream out3;
 	REQUIRE(jsonl_to_fbs_stream(schema, in2, out3));
 	REQUIRE(in2.eof());
+	
 	REQUIRE(out3.str().size() > 0);
-	REQUIRE(out3.str() == out1.str());
+	REQUIRE(Buffer(out3.str()).get_data() == Buffer(out1.str()).get_data());
 }
 

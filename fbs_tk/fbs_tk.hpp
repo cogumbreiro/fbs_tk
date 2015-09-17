@@ -8,6 +8,22 @@
 #include <iterator>
 #include <cassert>
 
+/**
+ * Add equality to flatbuffers::String
+ */
+namespace flatbuffers{
+inline bool string_eq(const flatbuffers::String &str1, const flatbuffers::String &str2) {
+	return str1.str() == str2.str();
+}
+inline bool operator==(const flatbuffers::String &str1, const flatbuffers::String &str2) {
+	return string_eq(str1, str2);
+}
+inline bool operator!=(const flatbuffers::String &str1, const flatbuffers::String &str2) {
+	return !string_eq(str1, str2);
+}
+}
+
+
 namespace fbs_tk {
 // http://stackoverflow.com/questions/13037490/
 template <typename T>
@@ -181,13 +197,6 @@ struct Root {
 		root = other.root == nullptr ? nullptr : get_root_unsafe<T>(data);
 	}
 
-	Root(std::function< flatbuffers::Offset<T> (flatbuffers::FlatBufferBuilder &)> factory) : data() {
-		flatbuffers::FlatBufferBuilder builder;
-		builder.Finish(factory(builder));
-		copy_from(data, builder);
-		root = get_root_unsafe<T>(data);
-	}
-	
 	Root(flatbuffers::FlatBufferBuilder &builder, flatbuffers::Offset<T> obj) : data() {
 		builder.Finish(obj);
 		copy_from(data, builder);
@@ -217,12 +226,6 @@ struct Root {
 	bool valid() const {
 		return root != nullptr;
 	}
-	
-	template<class S>
-	static inline Root<S> copy(const S& other) {
-		flatbuffers::FlatBufferBuilder b;
-		return Root<S>(b, copy<S>()(b, other));
-	}
 
 private:
 	friend std::istream &operator>>(std::istream &in, Root<T> &root) {
@@ -244,6 +247,33 @@ private:
     const T* root;
 	Buffer data;
 };
+
+namespace root {
+	/**
+	 * Copies a FBS object as a root object.
+	 */
+	template<class S>
+	static inline Root<S> copy(const S& other) {
+		flatbuffers::FlatBufferBuilder b;
+		return Root<S>(b, fbs_tk::copy<S>()(b, other));
+	}
+	
+	/**
+	 * Copies a root object as a shared_copy of a root object.
+	 */
+	template<class S>
+	static inline std::shared_ptr<fbs_tk::Root<S>> copy_shared(const Root<S> &obj) {
+		return std::make_shared<Root<S>>(obj);
+	}
+	
+	/**
+	 * Copies a FBS object as a shared root object.
+	 */
+	template<class S>
+	static inline std::shared_ptr<fbs_tk::Root<S>> copy_shared(const S &obj) {
+		return root::copy_shared<S>(root::copy(obj));
+	}
+}
 
 template<class T>
 Root<T> open_root(std::string filename) {

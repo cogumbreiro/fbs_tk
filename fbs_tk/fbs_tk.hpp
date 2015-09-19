@@ -58,13 +58,13 @@ inline void buffer_copy(const void *data, size_t size, std::string &dst) {
 }
 
 struct Buffer {
-	Buffer() {}
+	Buffer() : data() {}
 	
 	Buffer(std::initializer_list<uint8_t> args) : data(args) {}
 	
-	Buffer(const std::vector<uint8_t> &data) : data(data) {}
+	Buffer(std::vector<uint8_t> data) : data(std::move(data)) {}
 	
-	Buffer(const std::string &data) : data(data.begin(), data.end()) {}
+	Buffer(const std::string &str) : data(str.begin(), str.end()) {}
 	
 	Buffer(const Buffer &buff) : Buffer(buff.data) {}
 
@@ -77,15 +77,18 @@ struct Buffer {
 		copy_from(buff.data(), buff.size());
 	}
 	
+	inline void copy_to(void *buff) const {
+		memcpy(buff, data.data(), data.size());
+	}
+
 	inline std::vector<uint8_t> &get_data() {
 		return data;
 	}
-	
-	
+
 	inline const std::vector<uint8_t> &get_data() const {
 		return data;
 	}
-	
+
 	inline std::string str() const {
 		return std::string(data.begin(), data.end());
 	}
@@ -99,37 +102,47 @@ struct Buffer {
 	}
 	
 	/**
-	 * Loads all data available in the input stream into this buffer,
-	 * replacing the contents of this buffer.
+	 * Writes all data in this buffer into the output stream.
 	 */
-	inline bool load_data(std::istream &in) {
+	inline void write_data(std::ostream &out) const {
+		out.write(reinterpret_cast<const char*>(data.data()), data.size());
+	}
+	
+	/**
+	 * Clears the data in the current buffer and then reads a certain number
+	 * of bytes into this buffer.
+	 */
+	inline void read_data(std::istream &in, size_t size) {
 		data.clear();
-		// http://stackoverflow.com/questions/8075795/
-		in >> std::noskipws;
-		data.assign(std::istream_iterator<char>(in), std::istream_iterator<char>());
-		return !in.bad();
+		data.resize(size);
+		in.read(reinterpret_cast<char *>(data.data()), size);
 	}
 
 	/**
-	 * Writes all data in this buffer into the output stream.
+	 * Loads all data available in the input stream into this buffer,
+	 * replacing the contents of this buffer.
 	 */
-	void write_data(std::ostream &out) {
-		out.write(reinterpret_cast<const char*>(data.data()), data.size());
+	inline std::istream & read_all_data(std::istream &in) {
+		data.clear();
+		// make sure we do not skip precious bytes
+		// http://stackoverflow.com/questions/8075795/
+		in >> std::noskipws;
+		data.assign(std::istream_iterator<char>(in), std::istream_iterator<char>());
+		return in;
 	}
+
 	
 private:
 	std::vector<uint8_t> data;
 
 	friend std::istream &operator>>(std::istream &in, Buffer &buff) {
 		char size_buff[sizeof(uint32_t)];
-		in.read(size_buff, sizeof(uint32_t));
-		if (in.bad()) {
+		in.read(size_buff, sizeof(size_buff));
+		if (! in) {
 			return in;
 		}
 		auto size = flatbuffers::ReadScalar<uint32_t>(size_buff);
-		buff.data.resize(size);
-		auto data = buff.get_data().data();
-		in.read(reinterpret_cast<char *>(data), size);
+		buff.read_data(in, size);
 	  	return in;
     }
     
@@ -138,7 +151,7 @@ private:
 		char size_buff[sizeof(uint32_t)];
 		flatbuffers::WriteScalar(size_buff, size);
 		out.write(size_buff, sizeof(uint32_t));
-		out.write(reinterpret_cast<const char*>(buff.get_data().data()), size);
+		buff.write_data(out);
 		return out;
     }
 };
@@ -166,9 +179,13 @@ bool jsonl_to_fbs_stream(const std::string &schema, std::istream &in, std::ostre
 // GetRoot from a string
 template<class T>
 inline const T* get_root(const Buffer &buff) {
-	auto check = flatbuffers::Verifier(buff.get_data().data(), buff.size());
-	return check.VerifyBuffer<T>() ?
-		flatbuffers::GetRoot<T>(buff.get_data().data()) : nullptr;
+	auto data = buff.get_data().data();
+	if (buff.size() <= sizeof(flatbuffers::uoffset_t)) {
+		// XXX: workaround https://github.com/google/flatbuffers/pull/274
+		return nullptr;
+	}
+	auto check = flatbuffers::Verifier(data, buff.size());
+	return check.VerifyBuffer<T>() ? flatbuffers::GetRoot<T>(data) : nullptr;
 }
 
 template<class T>
@@ -187,20 +204,20 @@ template <class T>
 struct Root {
 	Root() : root(nullptr), data() {}
 	
-	Root(const Buffer &buff) {
-		data = buff;
-		root = get_root<T>(data);
+	Root(Buffer buff) : data(std::move(buff)) {
+		update_root();
 	}
 
-	Root(const Root &other) {
-		data = other.data;
-		root = other.root == nullptr ? nullptr : get_root_unsafe<T>(data);
-	}
+	Root(const Root &other) : Root(other.data) {}
 
+	/**
+	 * Finishes the builder with <code>obj</code> as root and
+	 * copies the data from the builder.
+	 */
 	Root(flatbuffers::FlatBufferBuilder &builder, flatbuffers::Offset<T> obj) : data() {
 		builder.Finish(obj);
 		copy_from(data, builder);
-		root = get_root_unsafe<T>(data);
+		update_root_unsafe();
 	}
 
 	const T* operator->() const {
@@ -226,11 +243,30 @@ struct Root {
 	bool valid() const {
 		return root != nullptr;
 	}
+	
+	const Buffer & get_data() const {
+		assert(valid());
+		return data;
+	}
+	
+	bool set_data(Buffer buff) {
+		data = std::move(buff);
+		update_root();
+		return valid();
+	}
 
 private:
+	inline void update_root_unsafe() {
+		root = get_root_unsafe<T>(data);
+	}
+	
+	inline void update_root() {
+		root = get_root<T>(data);
+	}
+
 	friend std::istream &operator>>(std::istream &in, Root<T> &root) {
 		in >> root.data;
-		root.root = get_root<T>(root.data);
+		root.update_root();
 		if (!root.valid()) {
 			// mark the input stream as invalid
 			in.setstate(in.badbit);
@@ -282,7 +318,7 @@ Root<T> open_root(std::string filename) {
 		return Root<T>();
 	}
 	Buffer buff;
-	buff.load_data(ifs);
+	buff.read_all_data(ifs);
 	fbs_tk::Root<T> result(buff);
 	if (ifs.bad()) {
 		ifs.close();

@@ -47,11 +47,12 @@ string bin_to_json(Parser &parser, const Buffer &bin) {
 // converts a binary FBS into a json object
 bool fbs_to_json(flatbuffers::Parser &parser, std::istream &in, std::ostream &out) {
 	Buffer bin;
-	if (!bin.load_data(in)) {
+	bin.read_all_data(in);
+	if (in.bad()) {
 		return false;
 	}
 	out << bin_to_json(parser, bin);
-	return true;
+	return out.good();
 }
 
 bool fbs_stream_to_jsonl(const string &schema, istream &in, ostream &out) {

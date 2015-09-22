@@ -179,11 +179,12 @@ bool jsonl_to_fbs_stream(const std::string &schema, std::istream &in, std::ostre
 // GetRoot from a string
 template<class T>
 inline const T* get_root(const Buffer &buff) {
-	auto data = buff.get_data().data();
-	if (buff.size() <= sizeof(flatbuffers::uoffset_t)) {
-		// XXX: workaround https://github.com/google/flatbuffers/pull/274
+	if (buff.size() == 0) {
+		// when the buffer is empty, buff.get_data().data() might not
+		// be initialized
 		return nullptr;
 	}
+	auto data = buff.get_data().data();
 	auto check = flatbuffers::Verifier(data, buff.size());
 	return check.VerifyBuffer<T>() ? flatbuffers::GetRoot<T>(data) : nullptr;
 }
@@ -248,22 +249,21 @@ struct Root {
 		assert(valid());
 		return data;
 	}
-	
-	bool set_data(Buffer buff) {
+
+	void set_data(Buffer buff) {
 		data = std::move(buff);
 		update_root();
-		return valid();
-	}
-
-private:
-	inline void update_root_unsafe() {
-		root = get_root_unsafe<T>(data);
 	}
 	
+private:
 	inline void update_root() {
 		root = get_root<T>(data);
 	}
 
+	inline void update_root_unsafe() {
+		root = get_root_unsafe<T>(data);
+	}
+	
 	friend std::istream &operator>>(std::istream &in, Root<T> &root) {
 		in >> root.data;
 		root.update_root();

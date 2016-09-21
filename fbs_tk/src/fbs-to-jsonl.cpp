@@ -28,19 +28,9 @@ bool json_to_fbs(flatbuffers::Parser &parser, std::istream &in, std::ostream &ou
 	return true;
 }
 
-
-struct BinToJson {
-	GeneratorOptions opts;
-	BinToJson() {
-		opts.strict_json = true;
-		opts.indent_step = -1;
-	}
-};
-
 string bin_to_json(Parser &parser, const Buffer &bin) {
-	static BinToJson init;
 	string buffer;
-	GenerateText(parser, bin.get_data().data(), init.opts, &buffer);
+	GenerateText(parser, bin.get_data().data(), &buffer);
 	return buffer;
 }
 
